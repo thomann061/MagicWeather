@@ -1,8 +1,7 @@
-
 #include <TFTv2.h>
 #include <SPI.h>
 #include <Bridge.h>
-#include <Console.h>
+//#include <Console.h>
 #include <Process.h>
 #include <HttpClient.h>
 
@@ -23,36 +22,36 @@ void setup() {
     Tft.setDisplayDirect(UP2DOWN);
    
     Bridge.begin(); //make contact with linux processor
-    Console.begin();
+    Serial.begin(9600);
 
     //waits for console to open
-    while(!Console);
-    Console.println("Connected to the serial!");
+    //while(!Serial);
+    Serial.println("Connected to the console!");
 
-    Console.println("1made it this far");
-
+    Serial.println("1made it this far");
+/*
     Process p;            
     p.begin("curl");      
-    Console.println("2made it this far");
+    Serial.println("2made it this far");
     p.addParameter("api.openweathermap.org/data/2.5/weather?lat=35&lon=139&mode=xml&APPID=e520bd843707ba2c49a4b0d895407f7d"); 
-   Console.println("3made it this far");
+   Serial.println("3made it this far");
     p.run();
     
      char inData[1000] = "";
      short index = 0;
-    Console.println("4made it this far");
+    Serial.println("4made it this far");
     while (p.available() > 0) {
       char c = p.read();
       inData[index] = c;
-      Console.print(inData[index]);
+      Serial.print(inData[index]);
       index++;
     }
     inData[index] = '\0';
 
-   Console.println("5made it this far");
+   Serial.println("5made it this far");
 
     for( index = 0; index < sizeof(inData); index++ ) { 
-    Console.print(inData[index]);
+    Serial.print(inData[index]);
     }
 
     char el[5];
@@ -61,10 +60,27 @@ void setup() {
           el[index] = inData[index];
     }
     el[index] = '\0';
-    Console.println("7made it this far");
-     Tft.drawString(el,100,100,2,RED);
+    Serial.println("7made it this far");
+    */
+    Tft.fillScreen(0,240,0,100,GRAY1);
+    Tft.drawLine(0,0,240,0,WHITE);  //void drawLine(INT16U x0,INT16U y0, INT16U x1,INT16U y1,INT16U color);
+    Tft.drawLine(0,100,240,100,WHITE);
+    Tft.drawLine(0,0,0,100,WHITE);
+    Tft.drawLine(240,0,240,100,WHITE);
+    // Tft.drawString(el,100,100,2,RED);
+     //Tft.fillRectangle(0, 0, 100,100,YELLOW); //void fillRectangle(INT16U poX, INT16U poY, 
+                                                //INT16U length, INT16U width, INT16U color);
+    Tft.drawString("Mon",230,0,2,WHITE);          //drawString((char*)string, poX, poY, size, fgcolor);
+    Tft.drawString("Tue",195,0,2,WHITE); 
+    Tft.drawString("Wed",161,0,2,WHITE);
+    Tft.drawString("Thu",127,0,2,WHITE);
+    Tft.drawString("Fri",92, 0,2,WHITE);
+    Tft.drawString("Sat",58, 0,2,WHITE);
+    Tft.drawString("Sun",24, 0,2,WHITE);
+
+                                             //void fillScreen(INT16U XL,INT16U XR,INT16U YU,INT16U YD,INT16U color);
+    
 }
 
     void loop() {
     }
-

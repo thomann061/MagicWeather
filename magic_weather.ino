@@ -1,115 +1,94 @@
+#include <ArduinoJson.h>                 //Json Parser Library
+#include <TFTv2.h>                       //Screen Library
+#include <SPI.h>                        
+#include <Bridge.h>
+#include <Process.h>
 
-#include <TFTv2.h>
-    #include <SPI.h>
-        #include <Bridge.h>
-            //#include <Console.h>
-                #include <Process.h>
-                    #include <HttpClient.h>
+#define LEFT2RIGHT 0                     //Screen Orientation Vars
+#define DOWN2UP    1
+#define RIGHT2LEFT 2
+#define UP2DOWN    3
 
+void setup() {
+  
+    TFT_BL_ON;                           //Turn on backlight
+    Tft.TFTinit();                       //Init TFT Lib
+    Tft.setDisplayDirect(UP2DOWN);       //Set Orientation
+    
+    StaticJsonBuffer<500> jsonBuffer;    //Buffer for json
+    Process p;                           //Process for curl
+    char inData[750] = {};               //array to hold curl request
 
-                        #define LEFT2RIGHT 0
-                        #define DOWN2UP    1
-                        #define RIGHT2LEFT 2
-                        #define UP2DOWN    3 //orientation for the correct display
+    char tempDisplay[] = {'0','0','\0'}; //array for temperature
+    char *tempP;                         //pointer for temperature
+    char *descP;                         //pointer for weather description
+    char *cityP;                         //pointer for city
+    const char *keywP;                   //pointer for weather description keyword
+    
+    Bridge.begin();                      //Make contact with linux side
+    Serial.begin(9600);                  //Begin serial transmition
+    pinMode(13, OUTPUT);                 //Set pin output
+    digitalWrite(13, HIGH);              //Write to pin to show bridge and serial is ready
+       
+    p.begin("curl");                     //begin curl            
+    p.addParameter("api.openweathermap.org/data/2.5/weather?id=5780993&units=imperial&mode=json&APPID=e520bd843707ba2c49a4b0d895407f7d"); 
+    p.run();                             //get json data from openweathermap.org for Salt Lake City
 
+    short index = 0; 
+    while (p.available() > 0) {          //Read each character from the curl process
+      char c = p.read();                 //into the array
+      inData[index] = c;
+      index++;
+    }
+    inData[index] = '\0';   
+    p.close();                           //when it is finished, close the process
 
-                        //Use Wifi to upload sketch
-                        //If you want to upload through USB, you must change Console to Serial
-                        //Make sure Monitor is closed before each sketch demonstration
+    JsonObject& root = jsonBuffer.parseObject(inData);          //parse the array into json
+    if (!root.success()) {                                      //if its not successful, exit the program early
+      Serial.println("parseObject() failed");
+      return;
+    } else {                                                    //if it is successful
+      const char* temp = root["main"]["temp"];                  //get the temperature
+      char* tempCast = const_cast<char*>(temp);
+      tempDisplay[0] = tempCast[0];
+      tempDisplay[1] = tempCast[1];
+      tempP = tempDisplay;
 
-                        void setup() {
-                        TFT_BL_ON;      // turn on the background light
-                        Tft.TFTinit();  // init TFT library
-                        Tft.setDisplayDirect(UP2DOWN);
+      const char* desc = root["weather"][0]["description"];     //get the description
+      descP = const_cast<char*>(desc);
+ 
+      const char* city = root["name"];                          //get the city
+      cityP = const_cast<char*>(city);
 
-                        Bridge.begin(); //make contact with linux processor
-                        Serial.begin(9600);
+      keywP = root["weather"][0]["main"];                       //get the description keyword
+    
+      delete temp, desc, city;                                  //free some memory
+                    
+      Tft.fillScreen(0, 240, 0, 320, GRAY1);                    //fill screen with gray
 
-                        //Container Box for Days: Temp
-                        Tft.fillScreen(0,190,0,100,GRAY1);
+      if(strcmp(keywP,"Clear") == 0) {                          //if the sky is clear, display a sun
+        for(int r = 0; r < 60; r = r + 2) {
+          Tft.drawCircle(115, 205, r, YELLOW);       
+        }
+      } else if(strcmp(keywP,"Rain") == 0) {                    //if its raining, draw a raincloud
+        Tft.fillCircle(140, 180, 20, BLUE); 
+        Tft.fillCircle(140, 200, 20, BLUE);
+        Tft.fillCircle(140, 220, 20, BLUE); 
+        Tft.fillCircle(140, 240, 20, BLUE);  
+        Tft.fillCircle(130, 190, 20, BLUE);  
+        Tft.fillCircle(130, 210, 20, BLUE); 
+        Tft.fillCircle(130, 230, 20, BLUE); 
+        Tft.drawLine(100, 160, 110, 170, BLUE);
+        Tft.drawLine(90, 180, 100, 190, BLUE);
+        Tft.drawLine(90, 210, 100, 220, BLUE);   
+      }
 
-                        //Boarder around the Container Box
-                        Tft.drawLine(0,0,190,0,WHITE);  
-                        Tft.drawLine(0,100,190,100,WHITE);
-                        Tft.drawLine(0,0,0,100,WHITE);
-                        Tft.drawLine(190,0,190,100,WHITE);
+      Tft.drawString(cityP, 220, 20, 2, CYAN);                  //Print the City
+      Tft.drawString(tempP, 130, 20, 5, WHITE);                 //Print the Temperature
+      Tft.drawCircle(130, 100, 3, WHITE);                       //Degree symbol
+      Tft.drawString(descP, 30, 20, 2, WHITE);                  //Print the Description
+      
+  }
+}
 
-                        //**********Header Box to hold the current city - if possible dynamic/updatable by zip code  *************** .fillScreen();
-                        Tft.fillScreen(240,193,0,320,GRAY1);
-                        //**********Boarder around the Header Box*********** .drawLine(x,y,X,Y);
-                        Tft.drawLine(192,0,192,320,WHITE);  
-                        Tft.drawLine(240,0,240,320,WHITE);
-                        Tft.drawLine(240,0,192,0,WHITE);
-                        Tft.drawLine(240,320,192,320,WHITE);
-
-
-
-                        //MUCH BETTER SUN TAKEN FROM THE LIBRARY FILE but I might still need to make Rain/Cloudy/and whatever else
-                        for(int r=0;r<60;r=r+2)                            //set r : 0--115
-                        {
-                        Tft.drawCircle(95,215,r,YELLOW);       //draw circle, center:(119, 160), color: random
-                        }
-
-                        //City, State text
-                        Tft.drawString("Salt Lake City, UT",215,0,2,CYAN);       // draw string: "hello", (0, 180), size: 3, color: CYAN
-
-                        //*******  Sun Shine Baby!
-                        //********    .fillScreen(x, X, y, Y, Color)
-                        //      Tft.fillScreen(65, 140, 185,260,YELLOW);
-                        //     Tft.drawLine(65,185,65,260,WHITE);  
-                        //      Tft.drawLine(140,185,140,260,WHITE);
-                        //      Tft.drawLine(65,185,140,185,WHITE);
-                        //      Tft.drawLine(65,260,140,260,WHITE);
-                        //***************(125,50,200,200,125,275)
-                        //      Tft.drawTriangle(105,175,155,225,105,275,RED);
-                        //***** Boarder line**** I think it might look better as just two .drawLine
-                        //     Tft.drawTriangle(105,173,156,225,105,276U,WHITE);
-                        // POSSIBLE TO FILL RECTANGLE LIKE CIRCLE OR SQUARE FROM TFTv2 CODE?
-                        ///###########################void TFT::drawTriangle( int poX1, int poY1, int poX2, int poY2, int poX3, int poY3, INT16U color)
-                        //#################################{
-                        //####################################drawLine(poX1, poY1, poX2, poY2,color);
-                        //####################################drawLine(poX1, poY1, poX3, poY3,color);
-                        //####################################drawLine(poX2, poY2, poX3, poY3,color);
-                        //#################################}
-
-
-
-                        //placer line to seperate the Days from Weather Temp #######Tft.drawLine(0,50,240,50,RED);
-
-                        Tft.drawString("Mon:",189,0,1,WHITE);
-
-                        Tft.drawString("Tue:",162,0,1,WHITE); 
-
-                        Tft.drawString("Wed:",135,0,1,WHITE);
-
-                        Tft.drawString("Thu:",108,0,1,WHITE);
-
-                        Tft.drawString("Fri:",81, 0,1,WHITE);
-
-                        Tft.drawString("Sat:",54, 0,1,WHITE);
-
-                        Tft.drawString("Sun:",27, 0,1,WHITE);
-
-
-                        for(int i = 1; i <= 7; i++)
-                        {
-                        for(int j = 0; j<7; j++)
-                        {
-                        //ascii for degrees is 167? source code goes to 127
-                        Tft.drawString("1 F",j * 27 + 27,50,1,BLUE);
-                        }                                      
-                        }                                        
-
-
-
-                        //void fillRectangle(INT16U poX, INT16U poY, 
-                        //INT16U length, INT16U width, INT16U color);
-                        //drawString((char*)string, poX, poY, size, fgcolor);
-
-                        //void drawLine(INT16U x0,INT16U y0, INT16U x1,INT16U y1,INT16U color);
-                        //.drawString("String", x, y,Font Size, Font Color)
-
-                        }
-
-                        void loop() {
-                        }
+void loop() {}

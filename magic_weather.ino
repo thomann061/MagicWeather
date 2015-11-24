@@ -81,6 +81,17 @@ void setup() {
         Tft.drawLine(100, 160, 110, 170, BLUE);
         Tft.drawLine(90, 180, 100, 190, BLUE);
         Tft.drawLine(90, 210, 100, 220, BLUE);   
+      } else if(strcmp(keywP,"Clouds") == 0) {  
+        for(int r = 0; r < 60; r = r + 2) {
+          Tft.drawCircle(115, 205, r, YELLOW);       
+        }
+        Tft.fillCircle(140, 180, 20, BLUE); 
+        Tft.fillCircle(140, 200, 20, BLUE);
+        Tft.fillCircle(140, 220, 20, BLUE); 
+        Tft.fillCircle(140, 240, 20, BLUE);  
+        Tft.fillCircle(130, 190, 20, BLUE);  
+        Tft.fillCircle(130, 210, 20, BLUE); 
+        Tft.fillCircle(130, 230, 20, BLUE); 
       }
 
       Tft.drawString(cityP, 220, 20, 2, CYAN);                  //Print the City
